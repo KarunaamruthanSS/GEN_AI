@@ -1,32 +1,22 @@
-# ==========================================================
-# Custom Attention Processor for Stable Diffusion
-# Integrates Window Attention into Diffusers UNet
-# ==========================================================
-
 import torch
-import torch.nn as nn
 from diffusers.models.attention_processor import AttnProcessor
 
 from src.window_attention.window_attention import WindowAttention
 from config import WINDOW_SIZE
 
 
-class WindowAttentionProcessor(AttnProcessor):
-    """
-    Custom attention processor that replaces self-attention
-    with window-based attention.
-
-    Only applied when encoder_hidden_states is None
-    (self-attention, not cross-attention).
-    """
+class WindowAttentionProcessor:
 
     def __init__(self, hidden_size):
-        super().__init__()
 
         self.window_attention = WindowAttention(
             channels=hidden_size,
             window_size=WINDOW_SIZE
         )
+
+        # default processor for fallback
+        self.default_processor = AttnProcessor()
+
 
     def __call__(
         self,
@@ -36,17 +26,11 @@ class WindowAttentionProcessor(AttnProcessor):
         attention_mask=None,
         **kwargs
     ):
-        """
-        hidden_states shape:
-        (batch, sequence, channels)
-        """
 
-        # --------------------------------------------------
-        # If cross-attention, use default implementation
-        # --------------------------------------------------
-
+        # CROSS ATTENTION → use default processor
         if encoder_hidden_states is not None:
-            return attn.processor(
+
+            return self.default_processor(
                 attn,
                 hidden_states,
                 encoder_hidden_states,
@@ -54,36 +38,21 @@ class WindowAttentionProcessor(AttnProcessor):
                 **kwargs
             )
 
-        # --------------------------------------------------
-        # Convert sequence to feature map
-        # --------------------------------------------------
+
+        # SELF ATTENTION → apply window attention
 
         batch, sequence, channels = hidden_states.shape
 
-        height = width = int(sequence ** 0.5)
+        size = int(sequence ** 0.5)
 
-        if height * width != sequence:
-            # fallback to default if shape not square
-            return attn.processor(
-                attn,
-                hidden_states,
-                encoder_hidden_states,
-                attention_mask,
-                **kwargs
-            )
+        if size * size != sequence:
+            return hidden_states
+
 
         x = hidden_states.transpose(1, 2)
-        x = x.reshape(batch, channels, height, width)
-
-        # --------------------------------------------------
-        # Apply window attention
-        # --------------------------------------------------
+        x = x.reshape(batch, channels, size, size)
 
         x = self.window_attention(x)
-
-        # --------------------------------------------------
-        # Convert back to sequence format
-        # --------------------------------------------------
 
         x = x.reshape(batch, channels, sequence)
         x = x.transpose(1, 2)
@@ -91,26 +60,30 @@ class WindowAttentionProcessor(AttnProcessor):
         return x
 
 
-# ==========================================================
-# Utility function to apply processor to UNet
-# ==========================================================
-
 def apply_window_attention(unet):
-    """
-    Replace self-attention processors in UNet
-    """
 
-    processors = {}
+    new_processors = {}
 
-    for name, module in unet.named_modules():
+    for name, processor in unet.attn_processors.items():
 
-        if hasattr(module, "set_processor"):
-            hidden_size = module.to_q.in_features
+        if name.startswith("mid_block"):
+            hidden_size = unet.config.block_out_channels[-1]
 
-            processors[name] = WindowAttentionProcessor(
-                hidden_size
-            )
+        elif name.startswith("up_blocks"):
+            block_id = int(name.split(".")[1])
+            hidden_size = list(reversed(unet.config.block_out_channels))[block_id]
 
-    unet.set_attn_processor(processors)
+        elif name.startswith("down_blocks"):
+            block_id = int(name.split(".")[1])
+            hidden_size = unet.config.block_out_channels[block_id]
+
+        else:
+            hidden_size = unet.config.block_out_channels[0]
+
+
+        new_processors[name] = WindowAttentionProcessor(hidden_size)
+
+
+    unet.set_attn_processor(new_processors)
 
     print("Window attention successfully applied.")

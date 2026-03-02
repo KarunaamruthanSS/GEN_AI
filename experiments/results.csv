@@ -1,0 +1,19 @@
+method,resolution,prompt,runtime_sec,memory_gb
+baseline,512,A futuristic city at sunset,4.438,4.635
+window,512,A futuristic city at sunset,3.363,4.636
+baseline,512,A dragon flying over snowy mountains,4.151,4.636
+window,512,A dragon flying over snowy mountains,3.36,4.636
+baseline,512,A hyper-realistic portrait of a humanoid robot,4.185,4.636
+window,512,A hyper-realistic portrait of a humanoid robot,3.382,4.636
+baseline,768,A futuristic city at sunset,11.709,5.378
+window,768,A futuristic city at sunset,7.233,5.378
+baseline,768,A dragon flying over snowy mountains,11.799,5.378
+window,768,A dragon flying over snowy mountains,7.324,5.378
+baseline,768,A hyper-realistic portrait of a humanoid robot,11.926,5.378
+window,768,A hyper-realistic portrait of a humanoid robot,7.378,5.378
+baseline,1024,A futuristic city at sunset,27.828,6.418
+window,1024,A futuristic city at sunset,12.252,6.418
+baseline,1024,A dragon flying over snowy mountains,28.388,6.418
+window,1024,A dragon flying over snowy mountains,12.525,6.418
+baseline,1024,A hyper-realistic portrait of a humanoid robot,28.69,6.418
+window,1024,A hyper-realistic portrait of a humanoid robot,12.53,6.418

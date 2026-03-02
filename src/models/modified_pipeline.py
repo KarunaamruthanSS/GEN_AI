@@ -1,7 +1,12 @@
 # ==========================================================
 # Modified Stable Diffusion Pipeline with Window Attention
 # ==========================================================
+import sys
+import os
 
+os.makedirs("outputs/window_images", exist_ok=True)
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 import torch
 from diffusers import StableDiffusionPipeline
 
