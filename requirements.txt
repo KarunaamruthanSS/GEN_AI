@@ -1,0 +1,21 @@
+# Core Deep Learning
+torch==2.1.2
+torchvision==0.16.2
+torchaudio==2.1.2
+
+# Diffusion & Transformers
+diffusers==0.25.0
+transformers==4.37.2
+accelerate==0.26.1
+safetensors==0.4.2
+
+# Utilities
+numpy==1.26.3
+scipy==1.11.4
+matplotlib==3.8.2
+pandas==2.1.4
+Pillow==10.2.0
+
+# Optional but recommended
+tqdm==4.66.1
+huggingface_hub==0.19.4
