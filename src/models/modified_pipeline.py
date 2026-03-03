@@ -1,5 +1,6 @@
 # ==========================================================
-# Modified Stable Diffusion Pipeline with Window Attention
+# Modified Stable Diffusion Pipeline with Multiple Attention Modes
+# Supports: Baseline, Window, Hybrid, Slicing
 # ==========================================================
 import sys
 import os
@@ -14,10 +15,16 @@ from config import (
     MODEL_NAME,
     DEVICE,
     DTYPE,
-    USE_SAFETY_CHECKER
+    USE_SAFETY_CHECKER,
+    WINDOW_SIZE,
+    HYBRID_SPLIT_DEPTH
 )
 
-from src.window_attention.attention_processor import apply_window_attention
+from src.window_attention.attention_processor import (
+    apply_window_attention,
+    apply_hybrid_attention,
+    apply_attention_slicing
+)
 
 
 # ----------------------------------------------------------
@@ -25,6 +32,7 @@ from src.window_attention.attention_processor import apply_window_attention
 # ----------------------------------------------------------
 
 def load_baseline_pipeline():
+    """Load standard Stable Diffusion pipeline without modifications."""
 
     pipe = StableDiffusionPipeline.from_pretrained(
         MODEL_NAME,
@@ -40,12 +48,25 @@ def load_baseline_pipeline():
 
 
 # ----------------------------------------------------------
-# Load modified pipeline with window attention
+# Load pipeline with specific attention mode
 # ----------------------------------------------------------
 
-def load_window_pipeline():
-
-    print("Loading Stable Diffusion pipeline...")
+def load_pipeline_with_mode(mode="window", window_size=None):
+    """
+    Load Stable Diffusion pipeline with specified attention mode.
+    
+    Args:
+        mode: "baseline", "window", "hybrid", or "slicing"
+        window_size: Window size for window/hybrid modes (uses config default if None)
+    
+    Returns:
+        Configured pipeline
+    """
+    
+    if window_size is None:
+        window_size = WINDOW_SIZE
+    
+    print(f"Loading Stable Diffusion pipeline with mode: {mode}")
 
     pipe = StableDiffusionPipeline.from_pretrained(
         MODEL_NAME,
@@ -57,13 +78,35 @@ def load_window_pipeline():
 
     pipe = pipe.to(DEVICE)
 
-    print("Applying window attention...")
-
-    apply_window_attention(pipe.unet)
-
-    print("Window attention enabled.")
+    # Apply attention modification based on mode
+    if mode == "baseline":
+        print("Using baseline (no modifications).")
+    
+    elif mode == "window":
+        print(f"Applying window attention (size={window_size})...")
+        apply_window_attention(pipe.unet, window_size=window_size)
+    
+    elif mode == "hybrid":
+        print(f"Applying hybrid attention (size={window_size}, split={HYBRID_SPLIT_DEPTH})...")
+        apply_hybrid_attention(pipe.unet, window_size=window_size, split_depth=HYBRID_SPLIT_DEPTH)
+    
+    elif mode == "slicing":
+        print("Applying attention slicing...")
+        apply_attention_slicing(pipe.unet)
+    
+    else:
+        raise ValueError(f"Unknown attention mode: {mode}")
 
     return pipe
+
+
+# ----------------------------------------------------------
+# Legacy function for backward compatibility
+# ----------------------------------------------------------
+
+def load_window_pipeline(window_size=None):
+    """Legacy function - use load_pipeline_with_mode instead."""
+    return load_pipeline_with_mode("window", window_size)
 
 
 # ----------------------------------------------------------
@@ -77,7 +120,7 @@ if __name__ == "__main__":
         print("This will be tested later on GPU.")
     else:
 
-        pipe = load_window_pipeline()
+        pipe = load_pipeline_with_mode("window")
 
         prompt = "A futuristic city at sunset"
 
@@ -86,3 +129,4 @@ if __name__ == "__main__":
         image.save("outputs/window_images/test.png")
 
         print("Test image saved.")
+

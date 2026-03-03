@@ -27,11 +27,19 @@ USE_SAFETY_CHECKER = False
 # WINDOW ATTENTION SETTINGS
 # ----------------------------------------------------------
 
-# Window size in latent space (start small like 8 or 16)
+# Window sizes for ablation study
+WINDOW_SIZES = [4, 8, 16]
+
+# Default window size (used for single runs)
 WINDOW_SIZE = 8
 
-# You can experiment later with:
-# WINDOW_SIZE = 16
+# Attention mode selection
+# Options: "baseline", "window", "hybrid", "slicing"
+ATTENTION_MODE = "window"
+
+# Hybrid attention configuration
+# Applies window attention to early blocks, full attention to deeper blocks
+HYBRID_SPLIT_DEPTH = 2  # blocks 0-1 use window, rest use full attention
 
 
 # ----------------------------------------------------------
@@ -60,6 +68,15 @@ SEED = 42
 
 # Number of runs per resolution (for averaging time)
 NUM_RUNS = 1  # Keep 1 for GPU cost control
+
+# Enable ablation study (tests multiple window sizes)
+ENABLE_ABLATION_STUDY = True
+
+# Enable quality metrics (CLIP, LPIPS)
+ENABLE_QUALITY_METRICS = True
+
+# Methods to compare
+METHODS_TO_COMPARE = ["baseline", "window", "slicing"]  # Add "hybrid" if needed
 
 
 # ----------------------------------------------------------

@@ -1,0 +1,16 @@
+# 1. Setup (one time)
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+
+# 2. Verify (check GPU availability)
+python test_setup.py
+
+# 3. Run minimal experiment (GPU required for speed)
+python src/benchmarking/scaling_experiment.py
+
+# 4. Generate plots
+python src/utils/plot_utils.py
+
+# 5. Try UI
+python app.py
