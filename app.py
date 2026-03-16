@@ -23,8 +23,10 @@ from config import (
 from src.models.modified_pipeline import load_pipeline_with_mode
 from src.utils.metrics import compute_clip_score
 
-# Global pipeline cache
+# Global pipeline cache — only one pipeline kept in memory at a time
+# to avoid CUDA OOM when switching modes
 _pipeline_cache = {}
+_current_cache_key = None
 
 
 # ----------------------------------------------------------
@@ -33,21 +35,48 @@ _pipeline_cache = {}
 
 def get_pipeline(mode, window_size):
     """
-    Get or load pipeline with caching.
-    
-    Args:
-        mode: "baseline", "window", "hybrid", or "slicing"
-        window_size: Window size for window/hybrid modes
-    
-    Returns:
-        Cached or newly loaded pipeline
+    Get or load pipeline. Evicts previous pipeline from GPU memory
+    before loading a new one to prevent CUDA OOM.
+
+    Uses enable_model_cpu_offload() instead of .to(DEVICE) so that
+    submodules are moved to GPU one at a time during the forward pass,
+    keeping peak VRAM around 4-5 GB instead of 10+ GB.
     """
+    global _pipeline_cache, _current_cache_key
+
     cache_key = f"{mode}_{window_size}"
-    
-    if cache_key not in _pipeline_cache:
+
+    if cache_key != _current_cache_key:
+        # Evict old pipeline from GPU before loading new one
+        if _current_cache_key and _current_cache_key in _pipeline_cache:
+            print("Unloading previous pipeline to free VRAM...")
+            old_pipe = _pipeline_cache.pop(_current_cache_key)
+            del old_pipe
+            torch.cuda.empty_cache()
+
         print(f"Loading pipeline: {mode} (window_size={window_size})")
-        _pipeline_cache[cache_key] = load_pipeline_with_mode(mode, window_size)
-    
+
+        # move_to_device=False — cpu_offload manages device placement
+        pipe = load_pipeline_with_mode(mode, window_size, move_to_device=False)
+
+        # Offloads each submodule to GPU only during its forward pass.
+        # This is the key fix: cuts peak VRAM from ~10 GB to ~4-5 GB.
+        pipe.enable_model_cpu_offload()
+
+        # Decode VAE in slices to avoid a large spike at the final step
+        pipe.enable_vae_slicing()
+
+        # xformers gives extra memory + speed savings if installed
+        if hasattr(pipe, "enable_xformers_memory_efficient_attention"):
+            try:
+                pipe.enable_xformers_memory_efficient_attention()
+                print("xformers memory efficient attention enabled.")
+            except Exception:
+                pass  # not installed — safe to skip
+
+        _pipeline_cache[cache_key] = pipe
+        _current_cache_key = cache_key
+
     return _pipeline_cache[cache_key]
 
 
@@ -81,8 +110,8 @@ def generate_image(
         # Get pipeline
         pipe = get_pipeline(attention_mode, window_size)
         
-        # Setup generator
-        generator = torch.Generator(device=DEVICE).manual_seed(seed)
+        # Setup generator — use CPU since model_cpu_offload manages device placement
+        generator = torch.Generator(device="cpu").manual_seed(int(seed))
         
         # Clear memory and track
         torch.cuda.empty_cache()
@@ -160,8 +189,7 @@ def generate_image(
 def create_ui():
     """Create advanced Gradio interface."""
     
-    with gr.Blocks(title="Window Attention Research Demo", theme=gr.themes.Soft()) as demo:
-        
+    with gr.Blocks(title="Window Attention Research Demo") as demo:        
         gr.Markdown("""
         # 🔬 Window Attention for Stable Diffusion
         ### Research Demo: Efficient Attention Mechanisms
@@ -335,6 +363,7 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        share=False,
-        show_error=True
+        share=True,
+        show_error=True,
+        theme=gr.themes.Soft()
     )

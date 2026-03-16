@@ -51,16 +51,18 @@ def load_baseline_pipeline():
 # Load pipeline with specific attention mode
 # ----------------------------------------------------------
 
-def load_pipeline_with_mode(mode="window", window_size=None):
+def load_pipeline_with_mode(mode="window", window_size=None, move_to_device=True):
     """
     Load Stable Diffusion pipeline with specified attention mode.
     
     Args:
         mode: "baseline", "window", "hybrid", or "slicing"
         window_size: Window size for window/hybrid modes (uses config default if None)
+        move_to_device: If False, skip .to(DEVICE) so the caller can use
+                        enable_model_cpu_offload() instead (avoids CUDA OOM).
     
     Returns:
-        Configured pipeline
+        Configured pipeline (not yet on device if move_to_device=False)
     """
     
     if window_size is None:
@@ -76,7 +78,11 @@ def load_pipeline_with_mode(mode="window", window_size=None):
     if not USE_SAFETY_CHECKER:
         pipe.safety_checker = None
 
-    pipe = pipe.to(DEVICE)
+    # Only move to device if requested.
+    # When using enable_model_cpu_offload() the pipeline must NOT be
+    # pre-moved to GPU — offload manages device placement itself.
+    if move_to_device:
+        pipe = pipe.to(DEVICE)
 
     # Apply attention modification based on mode
     if mode == "baseline":
