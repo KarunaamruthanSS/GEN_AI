@@ -59,7 +59,7 @@ def generate_and_measure(pipe, prompt, resolution):
         image, runtime (seconds), memory (GB)
     """
 
-    generator = torch.Generator(device=DEVICE).manual_seed(SEED)
+    generator = torch.Generator(device="cpu").manual_seed(SEED)
 
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()

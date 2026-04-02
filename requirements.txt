@@ -20,8 +20,11 @@ pandas==2.1.4
 Pillow==10.2.0
 
 # UI
-gradio==4.16.0
+streamlit==1.31.0
 
 # Optional but recommended
 tqdm==4.66.1
 huggingface_hub==0.23.4
+
+# Memory-efficient attention (recommended for GPU)
+# xformers==0.0.23.post1

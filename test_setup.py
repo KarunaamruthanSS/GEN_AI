@@ -44,11 +44,11 @@ def test_imports():
         return False
     
     try:
-        import gradio
-        print(f"  ✓ Gradio {gradio.__version__}")
+        import streamlit
+        print(f"  ✓ Streamlit {streamlit.__version__}")
     except ImportError as e:
-        print(f"  ✗ Gradio: {e}")
-        print(f"    Install with: pip install gradio")
+        print(f"  ✗ Streamlit: {e}")
+        print(f"    Install with: pip install streamlit")
         return False
     
     try:
