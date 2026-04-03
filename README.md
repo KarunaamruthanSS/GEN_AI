@@ -2993,6 +2993,19 @@ All working from same codebase with clear separation of concerns.
 
 ---
 
+## 🎨 Presentation Materials
+
+A complete **20-slide presentation pack** focusing deeply on the Generative AI concepts underlying this research repository has been generated. It is available in the root directory: [`presentation_slides_content.md`](./presentation_slides_content.md).
+
+Key concepts covered in the slides include:
+- **Latent Space vs. Pixel Space** (Variational Autoencoders).
+- **Text Conditioning** (Why Cross-Attention with CLIP is preserved).
+- The **O(n²)** Self-Attention complexity bottleneck.
+- **Window Attention** vs. **Hybrid Attention** mathematical models.
+- **Evaluation Metrics** for GenAI architectures (CLIP-Cosine Similarity and LPIPS).
+
+---
+
 ## Summary
 
 Your project has been transformed from a basic implementation into a comprehensive research framework with:
